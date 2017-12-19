@@ -7,11 +7,45 @@ from constants import *
 
 
 class Trigger(object):
-    def __init__(self, regex, func, gag=False):
+    def __init__(self, client, regex, func, gag=False):
         '''func takes three args: func(Robot, string, (caputuring, groups, in, string))'''
+        self.client = client
         self.regex = regex
         self.func = func
         self.gag = gag
+
+
+    def run(self, string, matches):
+        self.func(self.client, string, matches)
+
+
+class Timer(object):
+    def __init__(self, client, interval, func, repeat=False, max_runs=None):
+        self.client = client
+        self.interval = interval
+        self.func = func
+        self.repeat = repeat
+        self.thread = threading.Thread(target=self._func)
+        self.runs = 0
+        self.max_runs = max_runs
+
+
+    def start(self):
+        if not self.thread.isAlive():
+            self.thread.start()
+
+
+    def _func(self):
+        while self.repeat or (self.runs < self.max_runs) or not self.max_runs:
+            time.sleep(self.interval)
+            self.func(self.client, self)
+            self.runs += 1
+
+
+    def valid(self):
+        '''Returns False if the timer isn't valid to run (hit max_runs or the thread already died)'''
+        return (self.runs >= self.max_runs) or not self.thread.isAlive()
+
 
 
 class Robot(object):
@@ -25,6 +59,7 @@ class Robot(object):
         self.connection = None
         self.connected = False
         self.triggers = {}
+        self.timers = []
 
         self.init()
 
@@ -38,7 +73,21 @@ class Robot(object):
 
 
     def add_trigger(self, regex, func, name, gag=False):
-        self.triggers[name] = Trigger(regex=regex, func=func, gag=gag)
+        self.triggers[name] = Trigger(client=self, regex=regex, func=func, gag=gag)
+
+
+    def add_timer(self, interval, func, repeat=False, max_runs=None):
+        timer = Timer(client=self, interval=interval, func=func, repeat=repeat, max_runs=max_runs)
+        timer.start()
+        self.timers.append(timer)
+
+        for timer in self.timers:
+            if not timer.valid():
+                self.timers.remove(timer)
+
+
+    def disconnect(self):
+        self.connected = False
 
 
     def connect(self):
@@ -75,12 +124,16 @@ class Robot(object):
             if data not in ["\n", "\r\n"]:
                 data = data.rstrip()
 
+            printable = True
+
             for trigger in self.triggers.values():
                 matches = re.match(trigger.regex, data)
                 if matches:
-                    trigger.func(self, data, matches.groups())
-                    if not (trigger.gag) and not (self.silent):
-                        print data
-                else:
-                    if not (self.silent):
-                        print data
+                    trigger.run(data, matches.groups())
+                    if trigger.gag:
+                        printable = False
+
+
+            if printable and not self.silent:
+                print data
+
