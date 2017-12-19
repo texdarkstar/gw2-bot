@@ -20,12 +20,18 @@ class Trigger(object):
 
 
 class Timer(object):
-    def __init__(self, client, interval, func, repeat=False, max_runs=None):
+    def __init__(self, client, interval, func, max_runs=1):
+        '''Timer object.
+        client is a reference to the running client instance.
+        interval is how often the timer will fire.
+        func is the target func for the timer to run.
+        max_runs is the maximum number of times the timer will fire.
+        if max_runs is None, the timer will fire forever.'''
         self.client = client
         self.interval = interval
         self.func = func
-        self.repeat = repeat
         self.thread = threading.Thread(target=self._func)
+        self.thread.daemon = True
         self.runs = 0
         self.max_runs = max_runs
 
@@ -36,16 +42,15 @@ class Timer(object):
 
 
     def _func(self):
-        while self.repeat or (self.runs < self.max_runs) or not self.max_runs:
+        while (self.runs < self.max_runs) or (not self.max_runs):
             time.sleep(self.interval)
-            self.func(self.client, self)
             self.runs += 1
+            self.func(self.client, self)
 
 
     def valid(self):
         '''Returns False if the timer isn't valid to run (hit max_runs or the thread already died)'''
-        return (self.runs >= self.max_runs) or not self.thread.isAlive()
-
+        return (self.runs >= self.max_runs) or (not self.thread.isAlive())
 
 
 class Robot(object):
@@ -59,7 +64,7 @@ class Robot(object):
         self.connection = None
         self.connected = False
         self.triggers = {}
-        self.timers = []
+        self.timers = {}
 
         self.init()
 
@@ -76,14 +81,18 @@ class Robot(object):
         self.triggers[name] = Trigger(client=self, regex=regex, func=func, gag=gag)
 
 
-    def add_timer(self, interval, func, repeat=False, max_runs=None):
-        timer = Timer(client=self, interval=interval, func=func, repeat=repeat, max_runs=max_runs)
+    def add_timer(self, interval, func, max_runs=1, name=None):
+        timer = Timer(client=self, interval=interval, func=func, max_runs=max_runs)
         timer.start()
-        self.timers.append(timer)
 
-        for timer in self.timers:
-            if not timer.valid():
-                self.timers.remove(timer)
+        if not name:
+            name = "timer-%d" % int(len(self.timers.keys()) + 1)
+
+        self.timers[name] = timer
+
+        # for timername in self.timers.keys():
+            # if not self.timers[timername].valid():
+                # del self.timers[timername]
 
 
     def disconnect(self):
@@ -99,7 +108,7 @@ class Robot(object):
                 self.connection.sock.sendall(IAC + SB + TTYPE + IS + self.terminaltype + IAC + SE)
 
                 self.connection.write("load %s %s\r\n" % (self.username, self.password))
-                print "%s connected successfuly" % self.username
+                print "%s connected successfully" % self.username
                 self.connected = True
 
             except socket.error:
