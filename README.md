@@ -1,4 +1,4 @@
-#Example usage:
+# Example usage:
 
 ```python
 from time import sleep
@@ -11,7 +11,7 @@ class MyBot(Robot):
             regex=r"^You .*, '(.*)'$",
             func=self.my_func,
             name="my_func",
-			gag=True,
+            gag=True,
             )
 
     def my_func(self, robot, string, matches):
