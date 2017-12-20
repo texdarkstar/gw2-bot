@@ -90,13 +90,14 @@ class Robot(object):
 
         self.timers[name] = timer
 
-        # for timername in self.timers.keys():
-            # if not self.timers[timername].valid():
-                # del self.timers[timername]
+        #  for timername in self.timers.keys():
+            #  if not self.timers[timername].valid():
+                #  del self.timers[timername]
 
 
     def disconnect(self):
         self.connected = False
+        self.connection.close()
 
 
     def connect(self):
