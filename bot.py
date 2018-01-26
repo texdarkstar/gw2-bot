@@ -7,7 +7,7 @@ from constants import *
 
 
 class Trigger(object):
-    def __init__(self, client, regex, func, gag=False):
+    def __init__(self, client, regex, func, gag=False, keepmatching=False):
         '''func takes three args: func(Robot, string, (caputuring, groups, in, string))'''
         self.client = client
         self.regex = regex
@@ -77,8 +77,8 @@ class Robot(object):
         self.connection.write(string + "\n")
 
 
-    def add_trigger(self, regex, func, name, gag=False):
-        self.triggers[name] = Trigger(client=self, regex=regex, func=func, gag=gag)
+    def add_trigger(self, regex, func, name, gag=False, keepmatching=False):
+        self.triggers[name] = Trigger(client=self, regex=regex, func=func, gag=gag, keepmatching=keepmatching)
 
 
     def add_timer(self, interval, func, max_runs=1, name=None):
@@ -143,6 +143,8 @@ class Robot(object):
                     if trigger.gag:
                         printable = False
 
+                    if not trigger.keepmatching:
+                        break
 
             if printable and not self.silent:
                 print data
