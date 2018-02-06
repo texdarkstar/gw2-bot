@@ -7,7 +7,7 @@ from constants import *
 
 
 class Trigger(object):
-    def __init__(self, client, regex, func, gag=False, keepmatching=False, priority=priority):
+    def __init__(self, client, regex, func, gag=False, keepmatching=False, priority=1):
         '''func takes three args: func(Robot, string, (caputuring, groups, in, string))'''
         self.client = client
         self.regex = regex
@@ -132,13 +132,17 @@ class Robot(object):
 
     def loop(self):
         while self.connected:
-            data = self.format_ansi(self.connection.read_until("\n"))
+            try:
+                data = self.format_ansi(self.connection.read_until("\n"))
+            except AttributeError:
+                break
+
             if data not in ["\n", "\r\n"]:
                 data = data.rstrip()
 
             printable = True
 
-            for trigger in sorted(self.triggers.values(), key=lambda i: self.triggers[i].priority, reverse=True):
+            for trigger in sorted(self.triggers.values(), key=lambda i: i.priority, reverse=True):
                 matches = re.match(trigger.regex, data)
                 if matches:
                     trigger.run(data, matches.groups())
