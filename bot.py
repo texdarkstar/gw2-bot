@@ -36,15 +36,21 @@ class Timer(object):
         self.thread.daemon = True
         self.runs = 0
         self.max_runs = max_runs
+        self.isvalid = True
 
 
     def start(self):
         if not self.thread.isAlive():
             self.thread.start()
 
+    def stop(self):
+        self.isvalid = False
 
     def _func(self):
-        while (self.runs < self.max_runs) or (not self.max_runs):
+        while self.valid():
+            if not self.valid():
+                break
+                
             time.sleep(self.interval)
             self.runs += 1
             self.func(self.client, self)
@@ -52,7 +58,14 @@ class Timer(object):
 
     def valid(self):
         '''Returns False if the timer isn't valid to run (hit max_runs or the thread already died)'''
-        return (self.runs >= self.max_runs) or (not self.thread.isAlive())
+        if (not self.isvalid and self.max_runs == 0):
+            return False
+        elif (self.runs < self.max_runs):
+            return False
+        elif (not self.thread.isAlive()):
+            return False
+        else:
+            return True
 
 
 class Robot(object):
