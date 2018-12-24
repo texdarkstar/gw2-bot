@@ -60,7 +60,7 @@ class Timer(object):
         '''Returns False if the timer isn't valid to run (hit max_runs or the thread already died)'''
         if (not self.isvalid and self.max_runs == 0):
             return False
-        elif (self.runs < self.max_runs):
+        elif (self.runs >= self.max_runs):
             return False
         elif (not self.thread.isAlive()):
             return False
@@ -87,9 +87,8 @@ class Robot(object):
     def init(self):
         pass
 
-
-    def execute(self, string):
-        self.connection.write(string + "\n")
+    def execute(self, string, delim=";"):
+        self.connection.write("\n".join(string.split(delim)) + "\n")
 
 
     def add_trigger(self, regex, func, name, gag=False, keepmatching=False, priority=1):
